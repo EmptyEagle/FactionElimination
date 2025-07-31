@@ -1,0 +1,16 @@
+TO DO:
+
+- Give player an additional Mask after picking up a Mask Shard (DONE)
+- Give player an additional Soul Vessel after picking up a Vessel Fragment (DONE)
+- Figure out CharmChanger modifications/dependency (DONE)
+- Figure out TheHuntIsOn modifications/dependancy (DONE)
+- Create the Faction Elimination menu on file creation
+	- Get Commander selection working (DONE)
+		- Add commander buttons using exclusive buttons for all 12 Commanders across all 4 color sets (DONE)
+		- Make the buttons change variables in the playerEquipment, playerStats, and playerCharms arrays (DONE)
+	- Get Perk Shop working (DONE)
+		- Get Perks to appear when file is started (DONE)
+		- Add costs to Perks (DONE)
+	- Get Sabotage Perks working
+- Figure out how to link Perk progress across each Team
+- Figure out what to do for Perk purchasing mid-game
