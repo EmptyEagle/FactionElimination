@@ -14,7 +14,7 @@ namespace FactionElimination
     public class FactionElimination : Mod
     {
         public FactionElimination() : base("Faction Elimination") { }
-        public override string GetVersion() => "0.0.6.0";
+        public override string GetVersion() => "0.1.0.0";
         public override void Initialize()
         {
             ModHooks.HeroUpdateHook += OnHeroUpdate;
