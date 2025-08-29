@@ -15,6 +15,9 @@ Changes Charm settings through the CharmChanger mod
 
 Changes TheHuntIsOn settings
 
+
 NOTE: You need to start a new save file for the mod to take effect.
+
 NOTE: Mod is currently unfinished.
+
 
