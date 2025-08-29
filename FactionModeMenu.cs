@@ -20,6 +20,7 @@ namespace FactionElimination
         MenuLabel mainLabel;
         SmallButton commandersButton;
         SmallButton shopButton;
+        SmallButton mapButton;
         SmallButton startButton;
 
         MenuPage modeCommandersBluePage;
@@ -129,8 +130,22 @@ namespace FactionElimination
         GridItemPanel shopCharmsGrid;
         IMenuElement[] shopCharms;
 
+        MenuPage modeMap;
+        MenuLabel mapTitle;
+        GridItemPanel mapGrid;
+        IMenuElement[] mapComplete;
+
+        ToggleButton dirtmouthCrossroads;
+        ToggleButton dirtmouthPeak;
+        ToggleButton edgeHive;
+
         MenuPage modeShopSabotagePage;
         MenuLabel shopSabotageTitle;
+
+        ToggleButton infectCrossroads;
+        ToggleButton forcedHarm;
+        ToggleButton forcedDecay;
+        ToggleButton forcedStagnation;
 
         MenuPage modeSalubraFree;
         MenuLabel salubraFreeTitle;
@@ -195,6 +210,8 @@ namespace FactionElimination
         public static float focusSpeed;
         // Storing commander abilities [lifebloodoverheal, scholarability, gorgeousgeodiscount, delightabilities]
         public static bool[] commanderAbilities;
+        // Storing the chosen playable area
+        public static string playableArea;
 
         public bool flukeDiscount;
         public bool salubraCharm;
@@ -228,6 +245,8 @@ namespace FactionElimination
             commandersButton = new SmallButton(modeConfigPage, "Commander Selection");
             shopButton = new SmallButton(modeConfigPage, "Perk Shop");
             shopButton.Lock();
+            mapButton = new SmallButton(modeConfigPage, "Map Selection");
+            mapButton.Lock();
             startButton = new SmallButton(modeConfigPage, "Start Game");
             startButton.Lock();
 
@@ -277,6 +296,7 @@ namespace FactionElimination
             shopTitle.MoveTo(new Vector2(0, 1000f));
             charmsButton = new SmallButton(modeShopPage, "Charms");
             sabotageButton = new SmallButton(modeShopPage, "Sabotage (unfinished)");
+            sabotageButton.Lock();
             shopMain = [new MenuLabel(modeShopPage, "Upgrades (1 Perk Each)"), new MenuLabel(modeShopPage, "Nail Arts (1 Perk Each)"), addMask1, giveGSlash, addMask2, giveDSlash, addVessel1, giveCSlash, addVessel2, new MenuLabel(modeShopPage, "Spells (2 Perks Each)"), pureNail, giveSpirit1, giveIsmas, giveDive1, giveDGate, giveWraiths1, new MenuLabel(modeShopPage, "Charm Notches (1 Perk Each)"), new MenuLabel(modeShopPage, "Exclusive Spells"), addNotches1, giveSpirit2, addNotches2, giveDive2, addNotches3, giveWraiths2, charmsButton, sabotageButton, new MenuLabel(modeShopPage, "TheHuntIsOn Upgrades (1 Perk Each)"), new MenuLabel(modeShopPage, ""), huntFocus1, new MenuLabel(modeShopPage, ""), huntFocus2];
             shopMainGrid = new GridItemPanel(modeShopPage, new Vector2(0, 0), 2, 50f, 1000f, true, shopMain);
 
@@ -286,7 +306,15 @@ namespace FactionElimination
             shopCharmsGrid = new GridItemPanel(modeShopCharmsPage, new Vector2(0, 0), 5, 50f, 350f, true, shopCharms);
 
 
-            shopSabotageTitle = new MenuLabel(modeShopSabotagePage, "Sabotages");
+            shopSabotageTitle = new MenuLabel(modeShopSabotagePage, "Sabotages - ["+perkPoints+" Perks Remaining]");
+
+            modeMap = new MenuPage("Map Setup", modeConfigPage);
+            mapTitle = new MenuLabel(modeMap, "Select A Playable Area");
+            dirtmouthCrossroads = new ToggleButton(modeMap, "Dirtmouth + Forgotten Crossroads");
+            dirtmouthPeak = new ToggleButton(modeMap, "Dirtmouth + Crystal Peak");
+            edgeHive = new ToggleButton(modeMap, "Kingdom's Edge + The Hive");
+            mapComplete = [dirtmouthCrossroads, dirtmouthPeak, edgeHive];
+            mapGrid = new GridItemPanel(modeMap, new Vector2(0, 0), 2, 50f, 1000f, true, mapComplete);
 
             // modeSalubraFree = new MenuPage("Salubra Charm", modeConfigPage);
             // salubraFreeTitle = new MenuLabel(modeSalubraFree, "Sanguine Salubra's Charm");
@@ -296,6 +324,7 @@ namespace FactionElimination
 
             commandersButton.AddHideAndShowEvent(modeConfigPage, modeCommandersBluePage);
             shopButton.AddHideAndShowEvent(modeConfigPage, modeShopPage);
+            mapButton.AddHideAndShowEvent(modeConfigPage, modeMap);
             charmsButton.AddHideAndShowEvent(modeShopPage, modeShopCharmsPage);
             sabotageButton.AddHideAndShowEvent(modeShopPage, modeShopSabotagePage);
             commandersBlueLeft.AddHideAndShowEvent(modeCommandersBluePage, modeCommandersOrangePage);
@@ -382,6 +411,14 @@ namespace FactionElimination
             giveWraiths2.OnClick += () => ShopPurchase(giveWraiths2);
             huntFocus1.OnClick += () => ShopPurchase(huntFocus1);
             huntFocus2.OnClick += () => ShopPurchase(huntFocus2);
+            infectCrossroads.OnClick += () => ShopPurchase(infectCrossroads);
+            forcedHarm.OnClick += () => ShopPurchase(forcedHarm);
+            forcedDecay.OnClick += () => ShopPurchase(forcedDecay);
+            forcedStagnation.OnClick += () => ShopPurchase(forcedStagnation);
+
+            dirtmouthCrossroads.OnClick += () => SetMap(dirtmouthCrossroads);
+            dirtmouthPeak.OnClick += () => SetMap(dirtmouthPeak);
+            edgeHive.OnClick += () => SetMap(edgeHive);
 
             // Builds elements in each page
             IMenuElement[] elementsMain =
@@ -389,7 +426,8 @@ namespace FactionElimination
                 mainLabel,
                 commandersButton,
                 shopButton,
-                startButton,
+                mapButton,
+                startButton
             ];
             IMenuElement[] elementsCommanderBlue =
             [
@@ -435,7 +473,16 @@ namespace FactionElimination
             ];
             IMenuElement[] elementsShopSabotage =
             [
-                shopSabotageTitle
+                shopSabotageTitle,
+                infectCrossroads,
+                forcedHarm,
+                forcedDecay,
+                forcedStagnation
+            ];
+            IMenuElement[] elementsMap =
+            [
+                mapTitle,
+                mapGrid
             ];
             //IMenuElement[] elementsSalubraFree =
             //[
@@ -461,10 +508,15 @@ namespace FactionElimination
             vipShopCharms.Translate(new Vector2(0, -100));
             VerticalItemPanel vipShopSabotage = new(modeShopSabotagePage, SpaceParameters.TOP_CENTER_UNDER_TITLE, 100, false, elementsShopSabotage);
             modeConfigPage.AddToNavigationControl(vipShopSabotage);
+            VerticalItemPanel vipMap = new(modeMap, SpaceParameters.TOP_CENTER_UNDER_TITLE, 100, false, elementsMap);
+            modeConfigPage.AddToNavigationControl(vipMap);
+            vipMap.Translate(new Vector2(0, 140));
             //VerticalItemPanel vipSalubraFree = new(modeSalubraFree, SpaceParameters.TOP_CENTER_UNDER_TITLE, 100, false, elementsSalubraFree);
             //modeConfigPage.AddToNavigationControl(vipSalubraFree);
             //vipSalubraFree.Translate(new Vector2(0, -100));
         }
+
+
         private void StartGame()
         {
             UIManager.instance.StartNewGame(permaDeath: false);
@@ -711,6 +763,11 @@ namespace FactionElimination
             giveCharm40 = new ToggleButton(modeShopCharmsPage, "Grimmchild");
             giveCharm41 = new ToggleButton(modeShopCharmsPage, "Carefree Melody");
             charms = [giveCharm1, giveCharm2, giveCharm3, giveCharm4, giveCharm5, giveCharm6, giveCharm7, giveCharm8, giveCharm9, giveCharm10, giveCharm12, giveCharm13, giveCharm14, giveCharm15, giveCharm16, giveCharm17, giveCharm18, giveCharm19, giveCharm20, giveCharm21, giveCharm22, giveCharm23, giveCharm24, giveCharm25, giveCharm26, giveCharm27, giveCharm28, giveCharm29, giveCharm30, giveCharm31, giveCharm32, giveCharm33, giveCharm34, giveCharm35, giveCharm37, giveCharm38, giveCharm39, giveCharm40, giveCharm41];
+
+            infectCrossroads = new ToggleButton(modeShopSabotagePage, "Infect Crossroads (2 Perks)");
+            forcedHarm = new ToggleButton(modeShopSabotagePage, "Forced Harm (2 Perks)");
+            forcedDecay = new ToggleButton(modeShopSabotagePage, "Forced Decay (1 Perk)");
+            forcedStagnation = new ToggleButton(modeShopSabotagePage, "Forced Stagnation (1 Perk)");
         }
 
         public void SetCommander(ToggleButton button)
@@ -730,6 +787,8 @@ namespace FactionElimination
 
             button.SetValue(true);
             shopButton.Unlock();
+            mapButton.Lock();
+            startButton.Lock();
 
             // Set appropriate charms
             if (button == commandersBlue1)
@@ -810,6 +869,16 @@ namespace FactionElimination
                 giveCharm24.Unlock();
                 giveCharm24.SetValue(false);
             }
+            if (button == commandersOrange1 || button == commandersOrange2)
+            {
+
+                sabotageButton.Unlock();
+            }
+            else
+            {
+                sabotageButton.Lock();
+            }
+
 
             // Reset all Perk Shop purchases
             addMask1.SetValue(false);
@@ -856,7 +925,7 @@ namespace FactionElimination
         {
             button.SetValue(!button.Value);
             // Purchasing system
-            if (button == addMask1 || button == addMask2 || button == addVessel1 || button == addVessel2 || button == pureNail || button == giveIsmas || button == giveDGate || button == addNotches1 || button == addNotches2 || button == addNotches3 || charms.Contains(button) || button == giveGSlash || button == giveDSlash || button == giveCSlash || button == huntFocus1 || button == huntFocus2)
+            if (button == addMask1 || button == addMask2 || button == addVessel1 || button == addVessel2 || button == pureNail || button == giveIsmas || button == giveDGate || button == addNotches1 || button == addNotches2 || button == addNotches3 || charms.Contains(button) || button == giveGSlash || button == giveDSlash || button == giveCSlash || button == huntFocus1 || button == huntFocus2 || button == forcedDecay || button == forcedStagnation)
             {
                 if (!button.Value && perkPoints >= 1)
                 {
@@ -877,7 +946,7 @@ namespace FactionElimination
                 else if (button == giveCharm41 && !button.Value)
                     giveCharm40.Unlock();
             }
-            if (button == giveSpirit1 || button == giveDive1 || button == giveWraiths1)
+            if (button == giveSpirit1 || button == giveDive1 || button == giveWraiths1 || button == infectCrossroads || button == forcedHarm)
             {
                 if (!button.Value && (perkPoints >= 2 || (flukeDiscount && perkPoints >= 1)))
                 {
@@ -974,9 +1043,30 @@ namespace FactionElimination
             shopCharmsTitle.Translate(new Vector2(0, 300));
 
             if (perkPoints == 0)
-                startButton.Unlock();
+                mapButton.Unlock();
             else
+            {
+                playableArea = null;
+                mapButton.Lock();
                 startButton.Lock();
+            }
+        }
+
+        public void SetMap(ToggleButton button)
+        {
+            dirtmouthCrossroads.SetValue(false);
+            dirtmouthPeak.SetValue(false);
+            edgeHive.SetValue(false);
+
+            button.SetValue(true);
+            startButton.Unlock();
+
+            if (button == dirtmouthCrossroads)
+                playableArea = "dirtmouthcrossroads";
+            if (button == dirtmouthPeak)
+                playableArea = "dirtmouthpeak";
+            if (button == edgeHive)
+                playableArea = "edgehive";
         }
 
         public void SalubraCheck()

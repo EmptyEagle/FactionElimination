@@ -8,13 +8,17 @@ using CharmChanger;
 using HuntMod = TheHuntIsOn.TheHuntIsOn;
 using System.Linq;
 using ItemChanger;
+using ItemChanger.Extensions;
+using TheHuntIsOn;
+using System.Linq.Expressions;
+using UnityEngine.SceneManagement;
 
 namespace FactionElimination
 {
     public class FactionElimination : Mod
     {
         public FactionElimination() : base("Faction Elimination") { }
-        public override string GetVersion() => "0.1.0.0";
+        public override string GetVersion() => "0.1.1.0";
         public override void Initialize()
         {
             ModHooks.HeroUpdateHook += OnHeroUpdate;
@@ -22,9 +26,12 @@ namespace FactionElimination
             ModHooks.SetPlayerIntHook += SetPlayerIntHook;
             ModHooks.SetPlayerBoolHook += SetPlayerBoolHook;
             On.HeroController.AddGeo += GeoProgression;
+            ModHooks.CharmUpdateHook += CheckTwister;
             ModHooks.NewGameHook += NewGameHook;
+            UnityEngine.SceneManagement.SceneManager.activeSceneChanged += TransitionBlocker;
             FactionModeMenu.Register();
         }
+
 
         // Mr. Fatlife's overheal ability
         bool lifebloodOverheal = false;
@@ -39,11 +46,15 @@ namespace FactionElimination
         // Currently resets when reopening the game. Persists through save and quitting savefile though.
         public int perkPoints;
 
+        // dirtmouthcrossroads | dirtmouthpeak | edgehive
+        private string gameMap;
 
         int geoProgress;
         int curGeoGoal = 500;
 
         int grubsProgress;
+
+        int normalSpell;
 
 
         private void NewGameHook()
@@ -114,6 +125,12 @@ namespace FactionElimination
             CharmChangerMod.LS.sprintmasterSpeedCombo = FactionModeMenu.charmChanger2[5];
             CharmChangerMod.LS.nailmastersGloryChargeTime = FactionModeMenu.charmChanger2[6];
             HuntMod.SaveData.FocusSpeed = FactionModeMenu.focusSpeed;
+            normalSpell = 33;
+            HuntMod.SaveData.IsHunter = true;
+            HuntMod.SaveData.AffectionTable["BenchModule"] = ModuleAffection.OnlyHunter;
+            HuntMod.SaveData.AffectionTable["ElevatorModule"] = ModuleAffection.OnlyHunter;
+            HuntMod.SaveData.AffectionTable["ShadeModule"] = ModuleAffection.OnlyHunter;
+            HuntMod.SaveData.AffectionTable["SpaModule"] = ModuleAffection.OnlyHunter;
             lifebloodOverheal = FactionModeMenu.commanderAbilities[0];
             scholarAbility = FactionModeMenu.commanderAbilities[1];
             gorgeousGeoDiscount = FactionModeMenu.commanderAbilities[2];
@@ -137,11 +154,22 @@ namespace FactionElimination
             PlayerData.instance.mapRoyalGardens = true;
             PlayerData.instance.mapWaterways = true;
             PlayerData.instance.mapAllRooms = true;
+            gameMap = FactionModeMenu.playableArea;
 
             // Setting up Bretta and elevators
             PlayerData.instance.brettaRescued = true;
             PlayerData.instance.mineLiftOpened = true;
             PlayerData.instance.cityLift1 = true;
+            PlayerData.instance.outskirtsWall = true;
+
+            // Setting up Map Specific changes
+            if (gameMap == "dirtmouthcrossroads")
+                PlayerData.instance.hasTramPass = false;
+            if (gameMap == "edgehive")
+            {
+                PlayerData.instance.hasLoveKey = true;
+                PlayerData.instance.hasTramPass = false;
+            }
 
             if (scholarAbility)
             {
@@ -152,6 +180,7 @@ namespace FactionElimination
                 }
                 if (PlayerData.instance.fireballLevel + PlayerData.instance.quakeLevel + PlayerData.instance.screamLevel >= 3)
                 {
+                    // Still needs to reload file to update CharmChanger
                     Log("Scholar Spell ability activated!");
                     CharmChangerMod.LS.spellTwisterSpellCost = 12;
                 }
@@ -191,7 +220,7 @@ namespace FactionElimination
 
         private int SetPlayerIntHook(string name, int orig)
         {
-            Log(name);
+            //Log(name);
             
             // Gives complete Mask or Soul Vessel when Mask Shard or Vessel Fragment is collected
             if (name == "heartPieces" && PlayerData.instance.maxHealth < 9)
@@ -309,9 +338,245 @@ namespace FactionElimination
             self.AddGeoToCounter(amount);
         }
 
+        private void TransitionBlocker(Scene sc1, Scene sc2)
+        {
+            string roomEntered = sc2.name;
+            Log("Room entered: "+roomEntered);
+            TransitionPoint[] transitionList = UnityEngine.Object.FindObjectsOfType<TransitionPoint>();
+            GameObject blocker1;
+            GameObject blocker2;
+            GameObject blocker3;
+            foreach (TransitionPoint transitionPoint in transitionList)
+                Log(transitionPoint);
+            switch (roomEntered)
+            {
+                case "Town":
+                    Log(GameObject.Find("BlockTownLeft") == null);
+                    Log(GameObject.Find("BlockTownWell") == null);
+                    Log(GameObject.Find("BlockTownRight") == null);
+                    blocker1 = new GameObject("BlockTownLeft");
+                    blocker1.transform.Translate(2, 48.5f, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 11, 0);
+                    blocker2 = new GameObject("BlockTownWell");
+                    blocker2.transform.Translate(185, 4, 0);
+                    blocker2.transform.localScale = new Vector3(4, 0.5f, 0);
+                    blocker3 = new GameObject("BlockTownRight");
+                    blocker3.transform.Translate(263, 51.5f, 0);
+                    blocker3.transform.localScale = new Vector3(0.5f, 9, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthcrossroads":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            blocker3.AddComponent<BoxCollider2D>();
+                            break;
+                        case "dirtmouthpeak":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            blocker2.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Ruins2_07":
+                    Log(GameObject.Find("BlockBrokenKingsLeft") == null);
+                    blocker1 = new GameObject("BlockBrokenKingsLeft");
+                    blocker1.transform.Translate(0, 6.7f, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+
+                    switch (gameMap)
+                    {
+                        case "edgehive":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Deepnest_East_09":
+                    Log(GameObject.Find("BlockColoPathLeft") == null);
+                    blocker1 = new GameObject("BlockColoPathLeft");
+                    blocker1.transform.Translate(0, 13.2f, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 7, 0);
+
+                    switch (gameMap)
+                    {
+                        case "edgehive":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Waterways_14":
+                    Log(GameObject.Find("BlockTopIsmasLeft") == null);
+                    blocker1 = new GameObject("BlockTopIsmasLeft");
+                    blocker1.transform.Translate(8, 1.5f, 0);
+                    blocker1.transform.localScale = new Vector3(4, 0.5f, 0);
+
+                    switch (gameMap)
+                    {
+                        case "edgehive":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Deepnest_East_02":
+                    try
+                    {
+                        if (GameObject.Find("One Way Wall") != null)
+                        {
+                            Log("Breakable found!");
+                            UnityEngine.Object.Destroy(GameObject.Find("One Way Wall"));
+                        }
+                    }
+                    catch
+                    {
+                        Log("Failed to destroy breakable!");
+                    }
+                    break;
+                case "Crossroads_11_alt":
+                    Log(GameObject.Find("BlockCrossroadsGreenpathLeft") == null);
+                    blocker1 = new GameObject("BlockCrossroadsGreenpathLeft");
+                    blocker1.transform.Translate(0, 18.7f, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+                    
+                    switch (gameMap)
+                    {
+                        case "dirtmouthcrossroads":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Crossroads_35":
+                    Log(GameObject.Find("BlockCrossroadsCanyonBottom") == null);
+                    blocker1 = new GameObject("BlockCrossroadsCanyonBottom");
+                    blocker1.transform.Translate(64, 1, 0);
+                    blocker1.transform.localScale = new Vector3(4, 0.5f, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthcrossroads":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Crossroads_18":
+                    Log(GameObject.Find("BlockCrossroadsWastesBottom") == null);
+                    blocker1 = new GameObject("BlockCrossroadsWastesBottom");
+                    blocker1.transform.Translate(21, 1, 0);
+                    blocker1.transform.localScale = new Vector3(4, 0.5f, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthcrossroads":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Crossroads_45":
+                    Log(GameObject.Find("BlockCrossroadsPeak1Right") == null);
+                    blocker1 = new GameObject("BlockCrossroadsPeak1Right");
+                    blocker1.transform.Translate(69.75f, 40.7f, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthcrossroads":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Mines_33":
+                    Log(GameObject.Find("BlockCrossroadsPeak2Right") == null);
+                    blocker1 = new GameObject("BlockCrossroadsPeak2Right");
+                    blocker1.transform.Translate(100, 7.7f, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthcrossroads":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Crossroads_04":
+                    Log(GameObject.Find("BlockCrossroadsGroundsRight") == null);
+                    blocker1 = new GameObject("BlockCrossroadsGroundsRight");
+                    blocker1.transform.Translate(160, 24.2f, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 3, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthcrossroads":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Crossroads_49b":
+                    Log(GameObject.Find("BlockCrossroadsCityRight") == null);
+                    blocker1 = new GameObject("BlockCrossroadsCityRight");
+                    blocker1.transform.Translate(30, 6, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthcrossroads":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Mines_01":
+                    Log(GameObject.Find("BlockPeakCrossroads1Left") == null);
+                    blocker1 = new GameObject("BlockPeakCrossroads1Left");
+                    blocker1.transform.Translate(0, 49, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthpeak":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Mines_02":
+                    Log(GameObject.Find("BlockPeakCrossroads2Left") == null);
+                    blocker1 = new GameObject("BlockPeakCrossroads2Left");
+                    blocker1.transform.Translate(0, 28, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthpeak":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Mines_28":
+                    Log(GameObject.Find("BlockPeakGroundsBottom") == null);
+                    blocker1 = new GameObject("BlockPeakGroundsBottom");
+                    blocker1.transform.Translate(15, 45.5f, 0);
+                    blocker1.transform.localScale = new Vector3(18, 0.5f, 0);
+
+                    switch (gameMap)
+                    {
+                        case "dirtmouthpeak":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+            }
+        }
+
+        private void CheckTwister(PlayerData data, HeroController controller)
+        {
+            if (PlayerData.instance.equippedCharm_33)
+            {
+                HuntMod.SaveData.SpellCost = CharmChangerMod.LS.spellTwisterSpellCost;
+            }
+            else
+            {
+                HuntMod.SaveData.SpellCost = (int)normalSpell;
+            }
+        }
+
         private bool SetPlayerBoolHook(string name, bool orig)
         {
-            Log(name);
+            //Log(name);
 
             if (name == "killedBigFly" || name == "killedMawlek" || name == "killedBigBuzzer" || name == "killedMegaMossCharger" || name == "killedMegaJellyfish" || name == "killedMantisLord" || name == "killedMageKnight" || name == "killedJarCollector" || name == "killedMageLord" || name == "killedFlukeMother" || name == "killedDungDefender" || name == "killedMimicSpider" || name == "killedHiveKnight" || name == "killedTraitorLord" || name == "killedOblobble" || name == "killedLobsterLancer" || name == "killedGhostAladar" || name == "killedGhostXero" || name == "killedGhostHu" || name == "killedGhostMarmu" || name == "killedGhostNoEyes" || name == "killedGhostMarkoth" || name == "killedGhostGalien" || name == "killedWhiteDefender" || name == "killedGreyPrince" || name == "killedHollowKnight" || name == "killedFinalBoss" || name == "killedGrimm" || name == "killedNightmareGrimm" || name == "killedNailBros" || name == "killedPaintmaster" || name == "killedNailsage" || name == "killedHollowKnightPrime" || name == "killedInfectedKnight" || name == "hornet1Defeated" || name == "hornetOutskirtsDefeated" || name == "falseKnightDefeated" || name == "falseKnightDreamDefeated" || name == "mageLordDreamDefeated" || name == "infectedKnightDreamDefeated" || name == "defeatedMegaBeamMiner" || name == "defeatedMegaBeamMiner2" || name == "killedBlackKnight")
             {
