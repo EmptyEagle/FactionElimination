@@ -11,6 +11,7 @@ using ItemChanger;
 using ItemChanger.Extensions;
 using TheHuntIsOn;
 using System.Linq.Expressions;
+using UnityEngine.PlayerLoop;
 using UnityEngine.SceneManagement;
 
 namespace FactionElimination
@@ -18,7 +19,7 @@ namespace FactionElimination
     public class FactionElimination : Mod
     {
         public FactionElimination() : base("Faction Elimination") { }
-        public override string GetVersion() => "0.1.1.0";
+        public override string GetVersion() => "0.1.2.0";
         public override void Initialize()
         {
             ModHooks.HeroUpdateHook += OnHeroUpdate;
@@ -34,19 +35,19 @@ namespace FactionElimination
 
 
         // Mr. Fatlife's overheal ability
-        bool lifebloodOverheal = false;
+        bool lifebloodOverheal;
         // Esteemed Scholar's decrease in NArt charge time or Spell Twister cost when collecting 3 NArts or 3 Spells
-        bool scholarAbility = false;
+        bool scholarAbility;
         // The Gorgeous' geo Perks never increase in price
-        bool gorgeousGeoDiscount = false;
-        // When Ms. De Light eliminates another Team before Sudden Death, that Team becomes Infected and cannot partipate in Sudden Death
+        bool gorgeousGeoDiscount;
+        // When Ms. De Light eliminates another Team before Sudden Death, that Team becomes Infected and cannot participate in Sudden Death
         // When Ms. De Light enters Sudden Death, the Max Health of all players on the Team is lowered by 2
-        bool delightAbilities = false;
+        bool delightAbilities;
 
         // Currently resets when reopening the game. Persists through save and quitting savefile though.
         public int perkPoints;
 
-        // dirtmouthcrossroads | dirtmouthpeak | edgehive
+        // dirtmouthcrossroads | dirtmouthpeak | edgehive | spiritsdescent
         private string gameMap;
 
         int geoProgress;
@@ -56,10 +57,13 @@ namespace FactionElimination
 
         int normalSpell;
 
+        bool healthSetup;
+
 
         private void NewGameHook()
         {
             Log("New Game started.");
+            healthSetup = false;
             //ItemChangerMod.CreateSettingsProfile(overwrite: false);
             PlayerData.instance.hasDash = FactionModeMenu.playerEquipment[0];
             PlayerData.instance.canDash = FactionModeMenu.playerEquipment[0];
@@ -156,20 +160,23 @@ namespace FactionElimination
             PlayerData.instance.mapAllRooms = true;
             gameMap = FactionModeMenu.playableArea;
 
-            // Setting up Bretta and elevators
+            // Setting up Bretta and elevators/shortcuts
             PlayerData.instance.brettaRescued = true;
             PlayerData.instance.mineLiftOpened = true;
-            PlayerData.instance.cityLift1 = true;
             PlayerData.instance.outskirtsWall = true;
 
             // Setting up Map Specific changes
+            if (gameMap != "spiritsdescent")
+                PlayerData.instance.cityLift1 = true;
             if (gameMap == "dirtmouthcrossroads")
                 PlayerData.instance.hasTramPass = false;
             if (gameMap == "edgehive")
             {
                 PlayerData.instance.hasLoveKey = true;
                 PlayerData.instance.hasTramPass = false;
-            }
+            } 
+            if (gameMap == "spiritsdescent")
+                PlayerData.instance.hasWhiteKey = true;
 
             if (scholarAbility)
             {
@@ -178,27 +185,28 @@ namespace FactionElimination
                     Log("Scholar NArt ability activated!");
                     CharmChangerMod.LS.nailmastersGloryChargeTime = 0.5f;
                 }
-                if (PlayerData.instance.fireballLevel + PlayerData.instance.quakeLevel + PlayerData.instance.screamLevel >= 3)
+                if (PlayerData.instance.fireballLevel > 0 && PlayerData.instance.quakeLevel > 0 && PlayerData.instance.screamLevel > 0)
                 {
-                    // Still needs to reload file to update CharmChanger
                     Log("Scholar Spell ability activated!");
                     CharmChangerMod.LS.spellTwisterSpellCost = 12;
                 }
             }
         }
 
-        private void OnHeroUpdate()
+        public void OnHeroUpdate()
         {
-            while (PlayerData.instance.maxHealth < FactionModeMenu.playerStats[0])
+            while (PlayerData.instance.maxHealth < FactionModeMenu.playerStats[0] && !healthSetup)
             {
                 HeroController.instance.MaxHealth();
                 HeroController.instance.AddToMaxHealth(1);
                 PlayMakerFSM.BroadcastEvent("MAX HP UP");
+                if (PlayerData.instance.maxHealth == FactionModeMenu.playerStats[0])
+                    healthSetup = true;
                 if (PlayerData.instance.maxHealth >= 9)
                     break;
             }
         }
-
+        
         private int BeforeAddHealth(int amount)
         {
             if (lifebloodOverheal)
@@ -223,7 +231,7 @@ namespace FactionElimination
             //Log(name);
             
             // Gives complete Mask or Soul Vessel when Mask Shard or Vessel Fragment is collected
-            if (name == "heartPieces" && PlayerData.instance.maxHealth < 9)
+            if (name == "heartPieces" && ((PlayerData.instance.maxHealth < 9 && !PlayerData.instance.GetBool("equippedCharm_23")) || (PlayerData.instance.maxHealth < 11 && PlayerData.instance.GetBool("equippedCharm_23"))))
             {
                 Log("Mask Shard -> Mask");
                 HeroController.instance.MaxHealth();
@@ -288,7 +296,7 @@ namespace FactionElimination
                     Log("Scholar NArt ability activated!");
                     CharmChangerMod.LS.nailmastersGloryChargeTime = 0.5f;
                 }
-                if (PlayerData.instance.fireballLevel + PlayerData.instance.quakeLevel + PlayerData.instance.screamLevel >= 3)
+                if (PlayerData.instance.fireballLevel > 0 && PlayerData.instance.quakeLevel > 0 && PlayerData.instance.screamLevel > 0)
                 {
                     Log("Scholar Spell ability activated!");
                     CharmChangerMod.LS.spellTwisterSpellCost = 12;
@@ -341,6 +349,7 @@ namespace FactionElimination
         private void TransitionBlocker(Scene sc1, Scene sc2)
         {
             string roomEntered = sc2.name;
+            string roomExited = sc1.name;
             Log("Room entered: "+roomEntered);
             TransitionPoint[] transitionList = UnityEngine.Object.FindObjectsOfType<TransitionPoint>();
             GameObject blocker1;
@@ -348,6 +357,8 @@ namespace FactionElimination
             GameObject blocker3;
             foreach (TransitionPoint transitionPoint in transitionList)
                 Log(transitionPoint);
+            if (roomExited == "Ruins1_24")
+                PlayerData.instance.hasDreamNail = true;
             switch (roomEntered)
             {
                 case "Town":
@@ -492,6 +503,9 @@ namespace FactionElimination
                         case "dirtmouthcrossroads":
                             blocker1.AddComponent<BoxCollider2D>();
                             break;
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
                     }
                     break;
                 case "Crossroads_04":
@@ -559,6 +573,146 @@ namespace FactionElimination
                             break;
                     }
                     break;
+                case "Crossroads_08":
+                    Log(GameObject.Find("BlockCrossroadsAspidTopLeft") == null);
+                    Log(GameObject.Find("BlockCrossroadsAspidBottomLeft") == null);
+                    blocker1 = new GameObject("BlockCrossroadsAspidTopLeft");
+                    blocker1.transform.Translate(0, 22, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+                    blocker2 = new GameObject("BlockCrossroadsAspidBottomLeft");
+                    blocker2.transform.Translate(0, 6, 0);
+                    blocker2.transform.localScale = new Vector3(0.5f, 4, 0);
+
+                    switch (gameMap)
+                    {
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            blocker2.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Crossroads_03":
+                    Log(GameObject.Find("BlockCrossroadsLeverTop") == null);
+                    Log(GameObject.Find("BlockCrossroadsLeverLeft") == null);
+                    blocker1 = new GameObject("BlockCrossroadsLeverTop");
+                    blocker1.transform.Translate(14, 72, 0);
+                    blocker1.transform.localScale = new Vector3(4, 0.5f, 0);
+                    blocker2 = new GameObject("BlockCrossroadsLeverLeft");
+                    blocker2.transform.Translate(1, 33, 0);
+                    blocker2.transform.localScale = new Vector3(0.5f, 6, 0);
+
+                    switch (gameMap)
+                    {
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            blocker2.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "RestingGrounds_05":
+                    Log(GameObject.Find("BlockGroundsDoorRight") == null);
+                    blocker1 = new GameObject("BlockGroundsDoorRight");
+                    blocker1.transform.Translate(33, 75.5f, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 5, 0);
+
+                    switch (gameMap)
+                    {
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Ruins2_10b":
+                    Log(GameObject.Find("BlockGroundsCityRight") == null);
+                    Log(GameObject.Find("BlockGroundsEdgeRight") == null);
+                    blocker1 = new GameObject("BlockGroundsCityRight");
+                    blocker1.transform.Translate(30, 11, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 4, 0);
+                    blocker2 = new GameObject("BlockGroundsEdgeRight");
+                    blocker2.transform.Translate(30, 139.5f, 0);
+                    blocker2.transform.localScale = new Vector3(0.5f, 7, 0);
+
+                    switch (gameMap)
+                    {
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            blocker2.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Ruins1_17":
+                    Log(GameObject.Find("BlockStoreroomsBottom") == null);
+                    blocker1 = new GameObject("BlockStoreroomsBottom");
+                    blocker1.transform.Translate(7, 1.5f, 0);
+                    blocker1.transform.localScale = new Vector3(4, 0.5f, 0);
+
+                    switch (gameMap)
+                    {
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Ruins1_05":
+                    Log(GameObject.Find("BlockBelowSanctumBottom") == null);
+                    blocker1 = new GameObject("BlockBelowSanctumBottom");
+                    blocker1.transform.Translate(55, 104.5f, 0);
+                    blocker1.transform.localScale = new Vector3(4, 0.5f, 0);
+
+                    switch (gameMap)
+                    {
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Ruins2_03b":
+                    Log(GameObject.Find("BlockSpireMidBottom") == null);
+                    blocker1 = new GameObject("BlockSpireMidBottom");
+                    blocker1.transform.Translate(71, 1.5f, 0);
+                    blocker1.transform.localScale = new Vector3(4, 0.5f, 0);
+
+                    switch (gameMap)
+                    {
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Ruins1_24":
+                    if (PlayerData.instance.mageLordDefeated && gameMap == "spiritsdescent")
+                    {
+                        PlayerData.instance.hasDreamNail = !PlayerData.instance.mageLordDefeated;
+                    }
+                    break;
+                case "Room_Town_Stag_Station":
+                    Log(GameObject.Find("BlockDirtmouthStag") == null);
+                    blocker1 = new GameObject("BlockDirtmouthStag");
+                    blocker1.transform.Translate(50, 8, 0);
+                    blocker1.transform.localScale = new Vector3(0.5f, 6, 0);
+
+                    switch (gameMap)
+                    {
+                        case "spiritsdescent":
+                            blocker1.AddComponent<BoxCollider2D>();
+                            break;
+                    }
+                    break;
+                case "Ruins1_18":
+                    try
+                    {
+                        if (GameObject.Find("Ruins Gate") != null && gameMap == "spiritsdescent")
+                        {
+                            Log("Breakable found!");
+                            UnityEngine.Object.Destroy(GameObject.Find("Ruins Gate"));
+                        }
+                    }
+                    catch
+                    {
+                        Log("Failed to destroy breakable!");
+                    }
+
+                    break;
             }
         }
 
@@ -570,13 +724,13 @@ namespace FactionElimination
             }
             else
             {
-                HuntMod.SaveData.SpellCost = (int)normalSpell;
+                HuntMod.SaveData.SpellCost = normalSpell;
             }
         }
 
         private bool SetPlayerBoolHook(string name, bool orig)
         {
-            //Log(name);
+            Log(name);
 
             if (name == "killedBigFly" || name == "killedMawlek" || name == "killedBigBuzzer" || name == "killedMegaMossCharger" || name == "killedMegaJellyfish" || name == "killedMantisLord" || name == "killedMageKnight" || name == "killedJarCollector" || name == "killedMageLord" || name == "killedFlukeMother" || name == "killedDungDefender" || name == "killedMimicSpider" || name == "killedHiveKnight" || name == "killedTraitorLord" || name == "killedOblobble" || name == "killedLobsterLancer" || name == "killedGhostAladar" || name == "killedGhostXero" || name == "killedGhostHu" || name == "killedGhostMarmu" || name == "killedGhostNoEyes" || name == "killedGhostMarkoth" || name == "killedGhostGalien" || name == "killedWhiteDefender" || name == "killedGreyPrince" || name == "killedHollowKnight" || name == "killedFinalBoss" || name == "killedGrimm" || name == "killedNightmareGrimm" || name == "killedNailBros" || name == "killedPaintmaster" || name == "killedNailsage" || name == "killedHollowKnightPrime" || name == "killedInfectedKnight" || name == "hornet1Defeated" || name == "hornetOutskirtsDefeated" || name == "falseKnightDefeated" || name == "falseKnightDreamDefeated" || name == "mageLordDreamDefeated" || name == "infectedKnightDreamDefeated" || name == "defeatedMegaBeamMiner" || name == "defeatedMegaBeamMiner2" || name == "killedBlackKnight")
             {
@@ -591,7 +745,12 @@ namespace FactionElimination
                 Log("Dreamer beaten! 1 Perk awarded.");
                 Log("You now have " + perkPoints + " Perks.");
             }
-
+            
+            if (name == "openedCrossroads" && gameMap == "spiritsdescent")
+            {
+                PlayerData.instance.SetBool("openedRuins1", true);
+            }
+            
             return orig;
         }
 

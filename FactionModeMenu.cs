@@ -138,6 +138,7 @@ namespace FactionElimination
         ToggleButton dirtmouthCrossroads;
         ToggleButton dirtmouthPeak;
         ToggleButton edgeHive;
+        ToggleButton spiritsDescent;
 
         MenuPage modeShopSabotagePage;
         MenuLabel shopSabotageTitle;
@@ -151,6 +152,7 @@ namespace FactionElimination
         MenuLabel salubraFreeTitle;
         GridItemPanel salubraFreeGrid;
         IMenuElement[] salubraFree;
+        SmallButton salubraStart;
 
         ToggleButton salubraCharm1;
         ToggleButton salubraCharm2;
@@ -191,6 +193,7 @@ namespace FactionElimination
         ToggleButton salubraCharm39;
         ToggleButton salubraCharm40;
         ToggleButton salubraCharm41;
+        ToggleButton[] salubraCharms;
 
         // Storing player starting equipment [mothwingcloak, mantisclaw, crystalheart, monarchwings, ismastear, shadecloak, lumaflylantern, kingsbrand, trampass, dreamnail, dreamgate]
         public static bool[] playerEquipment;
@@ -249,6 +252,7 @@ namespace FactionElimination
             mapButton.Lock();
             startButton = new SmallButton(modeConfigPage, "Start Game");
             startButton.Lock();
+            
 
             modeCommandersBluePage = new MenuPage("Blue Commanders", modeConfigPage);
             commandersTitle1 = new MenuLabel(modeCommandersBluePage, "Commanders");
@@ -290,6 +294,7 @@ namespace FactionElimination
             modeShopPage = new MenuPage("Perk Shop", modeConfigPage);
             modeShopCharmsPage = new MenuPage("Charms Shop", modeShopPage);
             modeShopSabotagePage = new MenuPage("Sabotage Shop (unfinished)", modeShopPage);
+            modeSalubraFree = new MenuPage("Salubra Charm", modeConfigPage);
 
             AssignShopButtons();
             shopTitle = new MenuLabel(modeShopPage, "Perk Shop - ["+perkPoints+" Perks Remaining]");
@@ -313,14 +318,15 @@ namespace FactionElimination
             dirtmouthCrossroads = new ToggleButton(modeMap, "Dirtmouth + Forgotten Crossroads");
             dirtmouthPeak = new ToggleButton(modeMap, "Dirtmouth + Crystal Peak");
             edgeHive = new ToggleButton(modeMap, "Kingdom's Edge + The Hive");
-            mapComplete = [dirtmouthCrossroads, dirtmouthPeak, edgeHive];
+            spiritsDescent = new ToggleButton(modeMap, "Spirits' Descent");
+            mapComplete = [dirtmouthCrossroads, dirtmouthPeak, edgeHive, spiritsDescent];
             mapGrid = new GridItemPanel(modeMap, new Vector2(0, 0), 2, 50f, 1000f, true, mapComplete);
-
-            // modeSalubraFree = new MenuPage("Salubra Charm", modeConfigPage);
-            // salubraFreeTitle = new MenuLabel(modeSalubraFree, "Sanguine Salubra's Charm");
-            // salubraFree = [salubraCharm2, salubraCharm1, salubraCharm4, salubraCharm20, salubraCharm19, salubraCharm21, salubraCharm31, salubraCharm37, salubraCharm3, salubraCharm35, salubraCharm23, salubraCharm24, salubraCharm25, salubraCharm33, salubraCharm14, salubraCharm15, salubraCharm32, salubraCharm18, salubraCharm13, salubraCharm6, salubraCharm12, salubraCharm5, salubraCharm10, salubraCharm22, salubraCharm7, salubraCharm34, salubraCharm8, salubraCharm9, salubraCharm27, salubraCharm29, salubraCharm17, salubraCharm16, salubraCharm28, salubraCharm26, salubraCharm39, salubraCharm30, salubraCharm38, salubraCharm40, salubraCharm41];
-            // salubraFreeGrid instantiates incorrectly
-            // salubraFreeGrid = new GridItemPanel(modeSalubraFree, new Vector2(0, 0), 5, 50f, 350f, true, salubraFree);
+            
+            salubraFreeTitle = new MenuLabel(modeSalubraFree, "Sanguine Salubra's Charm");
+            salubraFree = [salubraCharm2, salubraCharm1, salubraCharm4, salubraCharm20, salubraCharm19, salubraCharm21, salubraCharm31, salubraCharm37, salubraCharm3, salubraCharm35, salubraCharm23, salubraCharm24, salubraCharm25, salubraCharm33, salubraCharm14, salubraCharm15, salubraCharm32, salubraCharm18, salubraCharm13, salubraCharm6, salubraCharm12, salubraCharm5, salubraCharm10, salubraCharm22, salubraCharm7, salubraCharm34, salubraCharm8, salubraCharm9, salubraCharm27, salubraCharm29, salubraCharm17, salubraCharm16, salubraCharm28, salubraCharm26, salubraCharm39, salubraCharm30, salubraCharm38, salubraCharm40, salubraCharm41];
+            salubraFreeGrid = new GridItemPanel(modeSalubraFree, new Vector2(0, 0), 5, 50f, 350f, true, salubraFree);
+            salubraStart = new SmallButton(modeSalubraFree, "Start Game");
+            salubraStart.Lock();
 
             commandersButton.AddHideAndShowEvent(modeConfigPage, modeCommandersBluePage);
             shopButton.AddHideAndShowEvent(modeConfigPage, modeShopPage);
@@ -335,8 +341,8 @@ namespace FactionElimination
             commandersRedRight.AddHideAndShowEvent(modeCommandersRedPage, modeCommandersOrangePage);
             commandersOrangeLeft.AddHideAndShowEvent(modeCommandersOrangePage, modeCommandersRedPage);
             commandersOrangeRight.AddHideAndShowEvent(modeCommandersOrangePage, modeCommandersBluePage);
-            //startButton.OnClick += () => SalubraCheck();
-            startButton.OnClick += StartGame;
+            startButton.OnClick += () => SalubraCheck();
+            salubraStart.OnClick += StartGame;
 
             commandersBlue1.OnClick += () => SetCommander(commandersBlue1);
             commandersBlue2.OnClick += () => SetCommander(commandersBlue2);
@@ -416,9 +422,51 @@ namespace FactionElimination
             forcedDecay.OnClick += () => ShopPurchase(forcedDecay);
             forcedStagnation.OnClick += () => ShopPurchase(forcedStagnation);
 
+            // Room for Salubra charm here
+            salubraCharm1.OnClick += () => ShopPurchase(salubraCharm1);
+            salubraCharm2.OnClick += () => ShopPurchase(salubraCharm2);
+            salubraCharm3.OnClick += () => ShopPurchase(salubraCharm3);
+            salubraCharm4.OnClick += () => ShopPurchase(salubraCharm4);
+            salubraCharm5.OnClick += () => ShopPurchase(salubraCharm5);
+            salubraCharm6.OnClick += () => ShopPurchase(salubraCharm6);
+            salubraCharm7.OnClick += () => ShopPurchase(salubraCharm7);
+            salubraCharm8.OnClick += () => ShopPurchase(salubraCharm8);
+            salubraCharm9.OnClick += () => ShopPurchase(salubraCharm9);
+            salubraCharm10.OnClick += () => ShopPurchase(salubraCharm10);
+            salubraCharm12.OnClick += () => ShopPurchase(salubraCharm12);
+            salubraCharm13.OnClick += () => ShopPurchase(salubraCharm13);
+            salubraCharm14.OnClick += () => ShopPurchase(salubraCharm14);
+            salubraCharm15.OnClick += () => ShopPurchase(salubraCharm15);
+            salubraCharm16.OnClick += () => ShopPurchase(salubraCharm16);
+            salubraCharm17.OnClick += () => ShopPurchase(salubraCharm17);
+            salubraCharm18.OnClick += () => ShopPurchase(salubraCharm18);
+            salubraCharm19.OnClick += () => ShopPurchase(salubraCharm19);
+            salubraCharm20.OnClick += () => ShopPurchase(salubraCharm20);
+            salubraCharm21.OnClick += () => ShopPurchase(salubraCharm21);
+            salubraCharm22.OnClick += () => ShopPurchase(salubraCharm22);
+            salubraCharm23.OnClick += () => ShopPurchase(salubraCharm23);
+            salubraCharm24.OnClick += () => ShopPurchase(salubraCharm24);
+            salubraCharm25.OnClick += () => ShopPurchase(salubraCharm25);
+            salubraCharm26.OnClick += () => ShopPurchase(salubraCharm26);
+            salubraCharm27.OnClick += () => ShopPurchase(salubraCharm27);
+            salubraCharm28.OnClick += () => ShopPurchase(salubraCharm28);
+            salubraCharm29.OnClick += () => ShopPurchase(salubraCharm29);
+            salubraCharm30.OnClick += () => ShopPurchase(salubraCharm30);
+            salubraCharm31.OnClick += () => ShopPurchase(salubraCharm31);
+            salubraCharm32.OnClick += () => ShopPurchase(salubraCharm32);
+            salubraCharm33.OnClick += () => ShopPurchase(salubraCharm33);
+            salubraCharm34.OnClick += () => ShopPurchase(salubraCharm34);
+            salubraCharm35.OnClick += () => ShopPurchase(salubraCharm35);
+            salubraCharm37.OnClick += () => ShopPurchase(salubraCharm37);
+            salubraCharm38.OnClick += () => ShopPurchase(salubraCharm38);
+            salubraCharm39.OnClick += () => ShopPurchase(salubraCharm39);
+            salubraCharm40.OnClick += () => ShopPurchase(salubraCharm40);
+            salubraCharm41.OnClick += () => ShopPurchase(salubraCharm41);
+
             dirtmouthCrossroads.OnClick += () => SetMap(dirtmouthCrossroads);
             dirtmouthPeak.OnClick += () => SetMap(dirtmouthPeak);
             edgeHive.OnClick += () => SetMap(edgeHive);
+            spiritsDescent.OnClick += () => SetMap(spiritsDescent);
 
             // Builds elements in each page
             IMenuElement[] elementsMain =
@@ -484,11 +532,12 @@ namespace FactionElimination
                 mapTitle,
                 mapGrid
             ];
-            //IMenuElement[] elementsSalubraFree =
-            //[
-            //    salubraFreeTitle,
-            //    salubraFreeGrid
-            //];
+            IMenuElement[] elementsSalubraFree =
+            [
+                salubraFreeTitle,
+                salubraFreeGrid,
+                salubraStart
+            ];
 
             VerticalItemPanel vipMain = new(modeConfigPage, SpaceParameters.TOP_CENTER_UNDER_TITLE, 100, false, elementsMain);
             modeConfigPage.AddToNavigationControl(vipMain);
@@ -511,9 +560,9 @@ namespace FactionElimination
             VerticalItemPanel vipMap = new(modeMap, SpaceParameters.TOP_CENTER_UNDER_TITLE, 100, false, elementsMap);
             modeConfigPage.AddToNavigationControl(vipMap);
             vipMap.Translate(new Vector2(0, 140));
-            //VerticalItemPanel vipSalubraFree = new(modeSalubraFree, SpaceParameters.TOP_CENTER_UNDER_TITLE, 100, false, elementsSalubraFree);
-            //modeConfigPage.AddToNavigationControl(vipSalubraFree);
-            //vipSalubraFree.Translate(new Vector2(0, -100));
+            VerticalItemPanel vipSalubraFree = new(modeSalubraFree, SpaceParameters.TOP_CENTER_UNDER_TITLE, 100, false, elementsSalubraFree);
+            modeConfigPage.AddToNavigationControl(vipSalubraFree);
+            salubraStart.Translate(new Vector2(0, -350));
         }
 
 
@@ -543,83 +592,83 @@ namespace FactionElimination
             if (addNotches3.Value)
                 playerStats[4] += 2;
             // Applying charm purchases
-            if (giveCharm1.Value)
+            if (giveCharm1.Value || salubraCharm1.Value)
                 playerCharms[0] = true;
-            if (giveCharm2.Value)
+            if (giveCharm2.Value || salubraCharm2.Value)
                 playerCharms[1] = true;
-            if (giveCharm3.Value)
+            if (giveCharm3.Value || salubraCharm3.Value)
                 playerCharms[2] = true;
-            if (giveCharm4.Value)
+            if (giveCharm4.Value || salubraCharm4.Value)
                 playerCharms[3] = true;
-            if (giveCharm5.Value)
+            if (giveCharm5.Value || salubraCharm5.Value)
                 playerCharms[4] = true;
-            if (giveCharm6.Value)
+            if (giveCharm6.Value || salubraCharm6.Value)
                 playerCharms[5] = true;
-            if (giveCharm7.Value)
+            if (giveCharm7.Value || salubraCharm7.Value)
                 playerCharms[6] = true;
-            if (giveCharm8.Value)
+            if (giveCharm8.Value || salubraCharm8.Value)
                 playerCharms[7] = true;
-            if (giveCharm9.Value)
+            if (giveCharm9.Value || salubraCharm9.Value)
                 playerCharms[8] = true;
-            if (giveCharm10.Value)
+            if (giveCharm10.Value || salubraCharm10.Value)
                 playerCharms[9] = true;
-            if (giveCharm12.Value)
+            if (giveCharm12.Value || salubraCharm12.Value)
                 playerCharms[11] = true;
-            if (giveCharm13.Value)
+            if (giveCharm13.Value || salubraCharm13.Value)
                 playerCharms[12] = true;
-            if (giveCharm14.Value)
+            if (giveCharm14.Value || salubraCharm14.Value)
                 playerCharms[13] = true;
-            if (giveCharm15.Value)
+            if (giveCharm15.Value || salubraCharm15.Value)
                 playerCharms[14] = true;
-            if (giveCharm16.Value)
+            if (giveCharm16.Value || salubraCharm16.Value)
                 playerCharms[15] = true;
-            if (giveCharm17.Value)
+            if (giveCharm17.Value || salubraCharm17.Value)
                 playerCharms[16] = true;
-            if (giveCharm18.Value)
+            if (giveCharm18.Value || salubraCharm18.Value)
                 playerCharms[17] = true;
-            if (giveCharm19.Value)
+            if (giveCharm19.Value || salubraCharm19.Value)
                 playerCharms[18] = true;
-            if (giveCharm20.Value)
+            if (giveCharm20.Value || salubraCharm20.Value)
                 playerCharms[19] = true;
-            if (giveCharm21.Value)
+            if (giveCharm21.Value || salubraCharm21.Value)
                 playerCharms[20] = true;
-            if (giveCharm22.Value)
+            if (giveCharm22.Value || salubraCharm22.Value)
                 playerCharms[21] = true;
-            if (giveCharm23.Value)
+            if (giveCharm23.Value || salubraCharm23.Value)
                 playerCharms[22] = true;
-            if (giveCharm24.Value)
+            if (giveCharm24.Value || salubraCharm24.Value)
                 playerCharms[23] = true;
-            if (giveCharm25.Value)
+            if (giveCharm25.Value || salubraCharm25.Value)
                 playerCharms[24] = true;
-            if (giveCharm26.Value)
+            if (giveCharm26.Value || salubraCharm26.Value)
                 playerCharms[25] = true;
-            if (giveCharm27.Value)
+            if (giveCharm27.Value || salubraCharm27.Value)
                 playerCharms[26] = true;
-            if (giveCharm28.Value)
+            if (giveCharm28.Value || salubraCharm28.Value)
                 playerCharms[27] = true;
-            if (giveCharm29.Value)
+            if (giveCharm29.Value || salubraCharm29.Value)
                 playerCharms[28] = true;
-            if (giveCharm30.Value)
+            if (giveCharm30.Value || salubraCharm30.Value)
                 playerCharms[29] = true;
-            if (giveCharm31.Value)
+            if (giveCharm31.Value || salubraCharm31.Value)
                 playerCharms[30] = true;
-            if (giveCharm32.Value)
+            if (giveCharm32.Value || salubraCharm32.Value)
                 playerCharms[31] = true;
-            if (giveCharm33.Value)
+            if (giveCharm33.Value || salubraCharm33.Value)
                 playerCharms[32] = true;
-            if (giveCharm34.Value)
+            if (giveCharm34.Value || salubraCharm34.Value)
                 playerCharms[33] = true;
-            if (giveCharm35.Value)
+            if (giveCharm35.Value || salubraCharm35.Value)
                 playerCharms[34] = true;
-            if (giveCharm37.Value)
+            if (giveCharm37.Value || salubraCharm37.Value)
                 playerCharms[36] = true;
-            if (giveCharm38.Value)
+            if (giveCharm38.Value || salubraCharm38.Value)
                 playerCharms[37] = true;
-            if (giveCharm39.Value)
+            if (giveCharm39.Value || salubraCharm39.Value)
                 playerCharms[38] = true;
-            if (giveCharm40.Value)
+            if (giveCharm40.Value || salubraCharm40.Value)
                 playerCharms[39] = true;
-            if (giveCharm41.Value)
+            if (giveCharm41.Value || salubraCharm41.Value)
                 playerCharms[40] = true;
             if (giveCSlash.Value)
                 playerNArts[0] = true;
@@ -690,6 +739,8 @@ namespace FactionElimination
             modeShopPage = null;
             modeShopCharmsPage = null;
             modeShopSabotagePage = null;
+            modeMap = null;
+            modeSalubraFree = null;
         }
 
         public override bool TryGetModeButton(MenuPage modeMenu, out BigButton button)
@@ -763,11 +814,52 @@ namespace FactionElimination
             giveCharm40 = new ToggleButton(modeShopCharmsPage, "Grimmchild");
             giveCharm41 = new ToggleButton(modeShopCharmsPage, "Carefree Melody");
             charms = [giveCharm1, giveCharm2, giveCharm3, giveCharm4, giveCharm5, giveCharm6, giveCharm7, giveCharm8, giveCharm9, giveCharm10, giveCharm12, giveCharm13, giveCharm14, giveCharm15, giveCharm16, giveCharm17, giveCharm18, giveCharm19, giveCharm20, giveCharm21, giveCharm22, giveCharm23, giveCharm24, giveCharm25, giveCharm26, giveCharm27, giveCharm28, giveCharm29, giveCharm30, giveCharm31, giveCharm32, giveCharm33, giveCharm34, giveCharm35, giveCharm37, giveCharm38, giveCharm39, giveCharm40, giveCharm41];
-
+            
             infectCrossroads = new ToggleButton(modeShopSabotagePage, "Infect Crossroads (2 Perks)");
             forcedHarm = new ToggleButton(modeShopSabotagePage, "Forced Harm (2 Perks)");
             forcedDecay = new ToggleButton(modeShopSabotagePage, "Forced Decay (1 Perk)");
             forcedStagnation = new ToggleButton(modeShopSabotagePage, "Forced Stagnation (1 Perk)");
+            
+            salubraCharm1 = new ToggleButton(modeSalubraFree, "Gathering Swarm");
+            salubraCharm2 = new ToggleButton(modeSalubraFree, "Wayward Compass");
+            salubraCharm3 = new ToggleButton(modeSalubraFree, "Grubsong");
+            salubraCharm4 = new ToggleButton(modeSalubraFree, "Stalwart Shell");
+            salubraCharm5 = new ToggleButton(modeSalubraFree, "Baldur Shell");
+            salubraCharm6 = new ToggleButton(modeSalubraFree, "Fury of the Fallen");
+            salubraCharm7 = new ToggleButton(modeSalubraFree, "Quick Focus");
+            salubraCharm8 = new ToggleButton(modeSalubraFree, "Lifeblood Heart");
+            salubraCharm9 = new ToggleButton(modeSalubraFree, "Lifeblood Core");
+            salubraCharm10 = new ToggleButton(modeSalubraFree, "Defender's Crest");
+            salubraCharm12 = new ToggleButton(modeSalubraFree, "Thorns of Agony");
+            salubraCharm13 = new ToggleButton(modeSalubraFree, "Mark of Pride");
+            salubraCharm14 = new ToggleButton(modeSalubraFree, "Steady Body");
+            salubraCharm15 = new ToggleButton(modeSalubraFree, "Heavy Blow");
+            salubraCharm16 = new ToggleButton(modeSalubraFree, "Sharp Shadow");
+            salubraCharm17 = new ToggleButton(modeSalubraFree, "Spore Shroom");
+            salubraCharm18 = new ToggleButton(modeSalubraFree, "Longnail");
+            salubraCharm19 = new ToggleButton(modeSalubraFree, "Shaman Stone");
+            salubraCharm20 = new ToggleButton(modeSalubraFree, "Soul Catcher");
+            salubraCharm21 = new ToggleButton(modeSalubraFree, "Soul Eater");
+            salubraCharm22 = new ToggleButton(modeSalubraFree, "Glowing Womb");
+            salubraCharm23 = new ToggleButton(modeSalubraFree, "Unbreakable Heart");
+            salubraCharm24 = new ToggleButton(modeSalubraFree, "Unbreakable Greed");
+            salubraCharm25 = new ToggleButton(modeSalubraFree, "Unbreakable Strength");
+            salubraCharm26 = new ToggleButton(modeSalubraFree, "Nailmaster's Glory");
+            salubraCharm27 = new ToggleButton(modeSalubraFree, "Joni's Blessing");
+            salubraCharm28 = new ToggleButton(modeSalubraFree, "Shape of Unn");
+            salubraCharm29 = new ToggleButton(modeSalubraFree, "Hiveblood");
+            salubraCharm30 = new ToggleButton(modeSalubraFree, "Dream Wielder");
+            salubraCharm31 = new ToggleButton(modeSalubraFree, "Dashmaster");
+            salubraCharm32 = new ToggleButton(modeSalubraFree, "Quick Slash");
+            salubraCharm33 = new ToggleButton(modeSalubraFree, "Spell Twister");
+            salubraCharm34 = new ToggleButton(modeSalubraFree, "Deep Focus");
+            salubraCharm35 = new ToggleButton(modeSalubraFree, "Grubberfly's Elegy");
+            salubraCharm37 = new ToggleButton(modeSalubraFree, "Sprintmaster");
+            salubraCharm38 = new ToggleButton(modeSalubraFree, "Dreamshield");
+            salubraCharm39 = new ToggleButton(modeSalubraFree, "Weaversong");
+            salubraCharm40 = new ToggleButton(modeSalubraFree, "Grimmchild");
+            salubraCharm41 = new ToggleButton(modeSalubraFree, "Carefree Melody");
+            salubraCharms = [salubraCharm1, salubraCharm2, salubraCharm3, salubraCharm4, salubraCharm5, salubraCharm6, salubraCharm7, salubraCharm8, salubraCharm9, salubraCharm10, salubraCharm12, salubraCharm13, salubraCharm14, salubraCharm15, salubraCharm16, salubraCharm17, salubraCharm18, salubraCharm19, salubraCharm20, salubraCharm21, salubraCharm22, salubraCharm23, salubraCharm24, salubraCharm25, salubraCharm26, salubraCharm27, salubraCharm28, salubraCharm29, salubraCharm30, salubraCharm31, salubraCharm32, salubraCharm33, salubraCharm34, salubraCharm35, salubraCharm37, salubraCharm38, salubraCharm39, salubraCharm40, salubraCharm41];
         }
 
         public void SetCommander(ToggleButton button)
@@ -789,6 +881,7 @@ namespace FactionElimination
             shopButton.Unlock();
             mapButton.Lock();
             startButton.Lock();
+            salubraStart.Lock();
 
             // Set appropriate charms
             if (button == commandersBlue1)
@@ -893,6 +986,11 @@ namespace FactionElimination
             addNotches3.SetValue(false);
             foreach (ToggleButton c in charms)
                 c.SetValue(false);
+            foreach (ToggleButton c in salubraCharms)
+            {
+                c.Unlock();
+                c.SetValue(false);
+            }
             giveGSlash.SetValue(false);
             giveDSlash.SetValue(false);
             giveCSlash.SetValue(false);
@@ -924,6 +1022,43 @@ namespace FactionElimination
         public void ShopPurchase(ToggleButton button)
         {
             button.SetValue(!button.Value);
+            // Free Sanguine Salubra charm
+            if (salubraCharms.Contains(button))
+            {
+                if (!button.Value)
+                {
+                    button.SetValue(true);
+                    foreach (ToggleButton c in salubraCharms)
+                    {
+                        c.Lock();
+                        //Log("Locked " + c);
+                    }
+                    button.Unlock();
+                    salubraStart.Unlock();
+                }
+                else
+                {
+                    button.SetValue(false);
+                    foreach (ToggleButton c in salubraCharms)
+                        c.Unlock();
+                    int lockIndex;
+                    foreach (ToggleButton c in charms)
+                    {
+                        if (c.Value)
+                        {
+                            lockIndex = Array.IndexOf(charms, c);
+                            salubraCharms[lockIndex].SetValue(true);
+                            salubraCharms[lockIndex].Lock();
+                            if (c == giveCharm40)
+                                salubraCharm41.Lock();
+                            if (c == giveCharm41)
+                                salubraCharm40.Lock();
+                        }
+                    }
+                    salubraStart.Lock();
+                }
+            }
+            
             // Purchasing system
             if (button == addMask1 || button == addMask2 || button == addVessel1 || button == addVessel2 || button == pureNail || button == giveIsmas || button == giveDGate || button == addNotches1 || button == addNotches2 || button == addNotches3 || charms.Contains(button) || button == giveGSlash || button == giveDSlash || button == giveCSlash || button == huntFocus1 || button == huntFocus2 || button == forcedDecay || button == forcedStagnation)
             {
@@ -1041,6 +1176,9 @@ namespace FactionElimination
             shopCharmsTitle.Destroy();
             shopCharmsTitle = new MenuLabel(modeShopCharmsPage, "Charms - [" + perkPoints + " Perks Remaining]");
             shopCharmsTitle.Translate(new Vector2(0, 300));
+            shopSabotageTitle.Destroy();
+            shopSabotageTitle = new MenuLabel(modeShopSabotagePage, "Sabotages - ["+perkPoints+" Perks Remaining]");
+            shopSabotageTitle.Translate(new Vector2(0, 300));
 
             if (perkPoints == 0)
                 mapButton.Unlock();
@@ -1057,6 +1195,7 @@ namespace FactionElimination
             dirtmouthCrossroads.SetValue(false);
             dirtmouthPeak.SetValue(false);
             edgeHive.SetValue(false);
+            spiritsDescent.SetValue(false);
 
             button.SetValue(true);
             startButton.Unlock();
@@ -1067,6 +1206,8 @@ namespace FactionElimination
                 playableArea = "dirtmouthpeak";
             if (button == edgeHive)
                 playableArea = "edgehive";
+            if (button == spiritsDescent)
+                playableArea = "spiritsdescent";
         }
 
         public void SalubraCheck()
@@ -1074,6 +1215,25 @@ namespace FactionElimination
             if (salubraCharm)
             {
                 startButton.AddHideAndShowEvent(modeConfigPage, modeSalubraFree);
+                int lockIndex;
+                foreach (ToggleButton c in salubraCharms)
+                {
+                    c.Unlock();
+                    c.SetValue(false);
+                }
+                foreach (ToggleButton c in charms)
+                {
+                    if (c.Value)
+                    {
+                        lockIndex = Array.IndexOf(charms, c);
+                        salubraCharms[lockIndex].SetValue(true);
+                        salubraCharms[lockIndex].Lock();
+                        if (c == giveCharm40)
+                            salubraCharm41.Lock();
+                        if (c == giveCharm41)
+                            salubraCharm40.Lock();
+                    }
+                }
             }
             else
                 StartGame();
